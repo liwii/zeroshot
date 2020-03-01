@@ -152,6 +152,8 @@ def main(num_epochs=10):
     model_ft.fc = nn.Linear(num_ftrs, NUM_PREDS)
 
     dataset = AnimalsDataset(images_file="train_images.txt", classes=train_classes, matrix=train_matrix, transform=transforms.Compose([
+        transforms.RandomHorizontalFlip(),
+        transforms.RandomRotation(10),
         transforms.ToTensor(),
         transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
     ]))
