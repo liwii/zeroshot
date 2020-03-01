@@ -151,7 +151,7 @@ def main():
     num_ftrs = model_ft.fc.in_features
     model_ft.fc = nn.Linear(num_ftrs, NUM_PREDS)
 
-    dataset = AnimalsDataset(images_file="train_images.txt", classes=classes, matrix=matrix, transform=transforms.Compose([
+    dataset = AnimalsDataset(images_file="train_images.txt", classes=train_classes, matrix=train_matrix, transform=transforms.Compose([
         transforms.ToTensor()
     ]))
     train_len = int(0.8 * len(dataset))
