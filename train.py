@@ -158,7 +158,7 @@ def main():
     val_len = len(dataset) - train_len
     train_dataset, val_dataset = torch.utils.data.random_split(dataset, [train_len, val_len])
 
-    batch_size = 4
+    batch_size = 16
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
 
@@ -179,7 +179,7 @@ def main():
             params_to_update.append(param)
             print("\t", name)
 
-    num_epochs = 1
+    num_epochs = 15
     criterion = nn.MSELoss()
     optimizer_ft = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
     model_ft, hist = train_model(model_ft, dataloaders, criterion, optimizer_ft, device, matrix, num_epochs=num_epochs)
