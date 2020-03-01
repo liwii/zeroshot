@@ -50,7 +50,7 @@ def main():
 
     num_ftrs = model_ft.fc.in_features
     model_ft.fc = nn.Linear(num_ftrs, NUM_PREDS)
-    model_ft.load_state_dict(torch.load('model.pth')())
+    model_ft.load_state_dict(torch.load('model.pth'))
     model_ft.eval()
 
     images = []

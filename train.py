@@ -193,7 +193,7 @@ def main(num_epochs=10):
     plt.ylim((0, 1.))
     plt.xticks(np.arange(1, num_epochs+1, 1.0))
     plt.savefig('val_acc.png')
-    torch.save(model_ft.state_dict, 'model.pth')
+    torch.save(model_ft.state_dict(), 'model.pth')
 
 if __name__ == '__main__':
     num_epochs = int(sys.argv[1])
