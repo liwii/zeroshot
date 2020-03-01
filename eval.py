@@ -73,7 +73,7 @@ def main():
 
     with open("test_images_predicted", "w") as fp:
         for image, c in zip(images, predicted):
-            fp.write("{}\t{}\n", image, c)
+            fp.write("{}\t{}\n".format(image, c))
 
 if __name__ == '__main__':
     main()
