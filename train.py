@@ -124,7 +124,7 @@ def train_model(model, dataloaders, criterion, optimizer, device, matrix, num_ep
     model.load_state_dict(best_model_wts)
     return model, val_acc_history
 
-def main():
+def main(num_epochs=10):
     text = open('predicate-matrix-binary.txt').read()
     rows = text.split("\n")[:-1]
     matrix = [list(map(int, row.split(' '))) for row in rows]
@@ -179,7 +179,6 @@ def main():
             params_to_update.append(param)
             print("\t", name)
 
-    num_epochs = 15
     criterion = nn.MSELoss()
     optimizer_ft = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
     model_ft, hist = train_model(model_ft, dataloaders, criterion, optimizer_ft, device, matrix, num_epochs=num_epochs)
@@ -196,4 +195,5 @@ def main():
     torch.save(model_ft.state_dict, 'model.pth')
 
 if __name__ == '__main__':
-    main()
+    num_epochs = int(sys.argv[1])
+    main(num_epochs)
