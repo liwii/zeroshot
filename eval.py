@@ -17,7 +17,9 @@ def predict(model, dataloader, device, matrix, classes):
             preds = prediction(matrix, outputs)
 
         for pred in preds:
-            result.append(classes[pred.item()])
+            c = classes[pred.item()]
+            print(c)
+            result.append(c)
 
     return result
 
@@ -37,7 +39,7 @@ def main():
     test_matrix = []
     test_classes = test_classes_text.split('\n')[:-1]
     test_classes_dict = {}
-    for i, c in test_classes:
+    for i, c in enumerate(test_classes):
         test_classes_dict[c] = i
         test_matrix.append(matrix[classes[c]])
     
@@ -48,7 +50,7 @@ def main():
 
     num_ftrs = model_ft.fc.in_features
     model_ft.fc = nn.Linear(num_ftrs, NUM_PREDS)
-    model_ft.load_state_dict(torch.load('model.pth'))
+    model_ft.load_state_dict(torch.load('model.pth')())
     model_ft.eval()
 
     images = []
