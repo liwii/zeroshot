@@ -54,7 +54,10 @@ def prediction(matrix, predicates):
     tree = spatial.KDTree(matrix)
     predictions = []
     for p in predicates:
-        _, pred = tree.query(p.cpu().detach())
+        p_ = p
+        if isinstance(p_, torch.Tensor):
+            p_ = p.cpu().detach()
+        _, pred = tree.query(p_)
         predictions.append(pred)
     return torch.IntTensor(predictions)
         
