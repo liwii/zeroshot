@@ -11,42 +11,48 @@ import sys
 def select_features(model, dataloaders, device, matrix):
     predicates = 85
 
-    all_labels = {
-        'train': np.empty((0)),
-        'val': np.empty((0))
-    }
+    try:
+        all_labels = torch.load('all_labels.pth')
+        all_outputs = torch.load('all_outputs.pth')
+    except FileNotFoundError:
 
-    all_outputs = {
-        'train': np.empty((0, predicates)),
-        'val': np.empty((0, predicates))
-    }
+        all_labels = {
+            'train': np.empty((0)),
+            'val': np.empty((0))
+        }
+
+        all_outputs = {
+            'train': np.empty((0, predicates)),
+            'val': np.empty((0, predicates))
+        }
 
 
-    for phase in ['train', 'val']:
+        for phase in ['train', 'val']:
 
-        all_data = len(dataloaders[phase].dataset)
+            all_data = len(dataloaders[phase].dataset)
 
-        done = 0
-    
-        for inputs, predicates, labels in dataloaders[phase]:
-            sys.stdout.write("\r{}/{}".format(done, all_data))
-            inputs = inputs.to(device)
-            predicates = predicates.to(device)
+            done = 0
+        
+            for inputs, predicates, labels in dataloaders[phase]:
+                sys.stdout.write("\r{}/{}".format(done, all_data))
+                inputs = inputs.to(device)
+                predicates = predicates.to(device)
 
-            with torch.no_grad():
-                outputs = model(inputs)
-                sigmoid = nn.Sigmoid()
-                outputs = sigmoid(outputs)
-                all_labels[phase] = np.concatenate([all_labels[phase], labels.cpu().numpy()])
-                all_outputs[phase] = np.concatenate([all_outputs[phase], outputs.cpu().numpy()])
+                with torch.no_grad():
+                    outputs = model(inputs)
+                    sigmoid = nn.Sigmoid()
+                    outputs = sigmoid(outputs)
+                    all_labels[phase] = np.concatenate([all_labels[phase], labels.cpu().numpy()])
+                    all_outputs[phase] = np.concatenate([all_outputs[phase], outputs.cpu().numpy()])
 
-            done += len(inputs)
+                done += len(inputs)
 
-    torch.save(all_labels, 'all_labels.pth')
-    torch.save(all_outputs, 'all_outputs.pth')
+        torch.save(all_labels, 'all_labels.pth')
+        torch.save(all_outputs, 'all_outputs.pth')
 
     clf = ExtraTreesClassifier(n_estimators=100)
     clf = clf.fit(all_outputs['train'], all_labels['train'])
+    #print(clf.feature_importances_)
     torch.save(clf, 'forest.pth')
 
     features_list = []
@@ -56,13 +62,16 @@ def select_features(model, dataloaders, device, matrix):
     matrix = np.array(matrix)
     for i in range(1, 9):
         features = i * 10
-        selector = SelectFromModel(clf, threshold=-np.inf, max_features=features)
+        selector = SelectFromModel(clf, threshold=-np.inf, max_features=features, prefit=True)
+        #print(selector.get_support())
         matrix_selected = selector.transform(matrix)
+        #print(matrix_selected[0])
         outputs_selected = selector.transform(all_outputs['train'])
-        predicted_train = prediction(matrix_selected, outputs_selected)
+        #print(outputs_selected[0])
+        predicted_train = prediction(matrix_selected, outputs_selected).cpu().numpy()
         acc_train = np.sum(all_labels['train'] == predicted_train) / len(all_labels['train'])
         outputs_selected_val = selector.transform(all_outputs['val'])
-        predicted_val = prediction(matrix_selected, outputs_selected_val)
+        predicted_val = prediction(matrix_selected, outputs_selected_val).cpu().numpy()
         acc_val = np.sum(all_labels['val'] == predicted_val) / len(all_labels['val'])
         print('With {} features, Training Accuracy: {}, Validation Accuracy: {}'.format(features, acc_train, acc_val))
         features_list.append(features)
@@ -98,7 +107,8 @@ def main(model):
 
     num_ftrs = model_ft.fc.in_features
     model_ft.fc = nn.Linear(num_ftrs, NUM_PREDS)
-    model_ft.load_state_dict(torch.load(model))
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    model_ft.load_state_dict(torch.load(model, map_location=device))
     model_ft.eval()
 
     dataset = AnimalsDataset(images_file="train_images.txt", classes=train_classes, matrix=train_matrix, transform=transforms.Compose([
@@ -118,7 +128,6 @@ def main(model):
         'val': val_loader,
     }
 
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model_ft = model_ft.to(device)
 
     features_list, train_acc, val_acc = select_features(model_ft, dataloaders, device, train_matrix)
