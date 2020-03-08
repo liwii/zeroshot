@@ -62,6 +62,9 @@ def prediction(matrix, predicates):
     return torch.IntTensor(predictions)
         
 def train_model(model, dataloaders, criterion, optimizer, device, matrix, num_epochs=25):
+    weights = torch.load('weights.pth')
+    weighted_matrix = np.multiply(matrix, weights)
+    weights = torch.Tensor(weights, device=device)
     since = time.time()
 
     val_acc_history = []
@@ -89,6 +92,7 @@ def train_model(model, dataloaders, criterion, optimizer, device, matrix, num_ep
                 sys.stdout.write("\r{}/{}".format(done, all_data))
                 inputs = inputs.to(device)
                 predicates = predicates.to(device)
+                predicates = predicates * weights
 
                 optimizer.zero_grad()
 
@@ -96,6 +100,7 @@ def train_model(model, dataloaders, criterion, optimizer, device, matrix, num_ep
                     outputs = model(inputs)
                     sigmoid = nn.Sigmoid()
                     outputs = sigmoid(outputs)
+                    outputs = outputs * weights
                     loss = criterion(outputs, predicates)
                     preds = prediction(matrix, outputs)
                     if phase == 'train':
@@ -109,7 +114,7 @@ def train_model(model, dataloaders, criterion, optimizer, device, matrix, num_ep
             epoch_loss = running_loss / len(dataloaders[phase].dataset)
             epoch_acc = running_corrects.double() / len(dataloaders[phase].dataset)
 
-            print('{} Loss: {:.4f} Acc: {:.4f}'.format(phase, epoch_loss, epoch_acc))
+            print('\n{} Loss: {:.4f} Acc: {:.4f}'.format(phase, epoch_loss, epoch_acc))
             
             if phase == 'val' and epoch_acc > best_acc:
                 best_acc = epoch_acc
@@ -187,7 +192,7 @@ def main(num_epochs=10):
 
     criterion = nn.MSELoss()
     optimizer_ft = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
-    model_ft, hist = train_model(model_ft, dataloaders, criterion, optimizer_ft, device, matrix, num_epochs=num_epochs)
+    model_ft, hist = train_model(model_ft, dataloaders, criterion, optimizer_ft, device, train_matrix, num_epochs=num_epochs)
     ohist = [h.cpu().numpy() for h in hist]
 
     plt.title("Validation Accuracy vs. Number of Training Epochs")
@@ -195,7 +200,6 @@ def main(num_epochs=10):
     plt.ylabel("Validation Accuracy")
 
     plt.plot(range(1, num_epochs + 1), ohist)
-    plt.ylim((0, 1.))
     plt.xticks(np.arange(1, num_epochs+1, 1.0))
     plt.savefig('val_acc.png')
     torch.save(model_ft.state_dict(), 'model.pth')
