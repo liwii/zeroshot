@@ -64,7 +64,10 @@ def prediction(matrix, predicates):
 def train_model(model, dataloaders, criterion, optimizer, device, matrix, num_epochs=25):
     weights = torch.load('weights.pth')
     weighted_matrix = np.multiply(matrix, weights)
-    weights = torch.Tensor(weights, device=device)
+    if device.type == 'cpu':
+        weights = torch.FloatTensor(weights)
+    else:
+        weights = torch.cuda.FloatTensor(weights)
     since = time.time()
 
     val_acc_history = []
