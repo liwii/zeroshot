@@ -132,7 +132,7 @@ def train_model(model, dataloaders, criterion, optimizer, device, matrix, num_ep
     model.load_state_dict(best_model_wts)
     return model, val_acc_history
 
-def main(num_epochs=10):
+def main(model, num_epochs=10):
     text = open('predicate-matrix-binary.txt').read()
     rows = text.split("\n")[:-1]
     matrix = [list(map(int, row.split(' '))) for row in rows]
@@ -158,10 +158,10 @@ def main(num_epochs=10):
 
     num_ftrs = model_ft.fc.in_features
     model_ft.fc = nn.Linear(num_ftrs, NUM_PREDS)
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    model_ft.load_state_dict(torch.load(model, map_location=device))
 
     dataset = AnimalsDataset(images_file="train_images.txt", classes=train_classes, matrix=train_matrix, transform=transforms.Compose([
-        transforms.RandomHorizontalFlip(),
-        transforms.RandomRotation(10),
         transforms.ToTensor(),
         transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
     ]))
@@ -178,7 +178,6 @@ def main(num_epochs=10):
         'val': val_loader,
     }
 
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     params_to_update = []
 
@@ -205,5 +204,6 @@ def main(num_epochs=10):
     torch.save(model_ft.state_dict(), 'model.pth')
 
 if __name__ == '__main__':
-    num_epochs = int(sys.argv[1])
-    main(num_epochs)
+    model = sys.argv[1]
+    num_epochs = int(sys.argv[2])
+    main(model, num_epochs)
