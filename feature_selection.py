@@ -37,8 +37,8 @@ def select_features(model, dataloaders, device, matrix):
                 outputs = model(inputs)
                 sigmoid = nn.Sigmoid()
                 outputs = sigmoid(outputs)
-                all_labels[phase] = np.concatenate([all_labels[phase], labels.numpy()])
-                all_outputs[phase] = np.concatenate([all_outputs[phase], outputs.numpy()])
+                all_labels[phase] = np.concatenate([all_labels[phase], labels.cpu().numpy()])
+                all_outputs[phase] = np.concatenate([all_outputs[phase], outputs.cpu().numpy()])
 
             done += len(inputs)
 
