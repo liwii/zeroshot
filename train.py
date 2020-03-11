@@ -15,6 +15,7 @@ from scipy import spatial
 IMAGES_DIR = "JPEGImages_128x128/"
 NUM_PREDS = 85
 RESNET_INPUT_SIZE = 224
+LAMBDA = 0.0001
 
 class AnimalsDataset(Dataset):
     def __init__(self, images_file, classes, matrix, transform=None):
@@ -62,12 +63,6 @@ def prediction(matrix, predicates):
     return torch.IntTensor(predictions)
         
 def train_model(model, dataloaders, criterion, optimizer, device, matrix, num_epochs=25):
-    weights = torch.load('weights.pth')
-    weighted_matrix = np.multiply(matrix, weights)
-    if device.type == 'cpu':
-        weights = torch.FloatTensor(weights)
-    else:
-        weights = torch.cuda.FloatTensor(weights)
     since = time.time()
 
     val_acc_history = []
@@ -95,7 +90,6 @@ def train_model(model, dataloaders, criterion, optimizer, device, matrix, num_ep
                 sys.stdout.write("\r{}/{}".format(done, all_data))
                 inputs = inputs.to(device)
                 predicates = predicates.to(device)
-                predicates = predicates * weights
 
                 optimizer.zero_grad()
 
@@ -103,15 +97,16 @@ def train_model(model, dataloaders, criterion, optimizer, device, matrix, num_ep
                     outputs = model(inputs)
                     sigmoid = nn.Sigmoid()
                     outputs = sigmoid(outputs)
-                    outputs = outputs * weights
                     loss = criterion(outputs, predicates)
+                    reg_loss = torch.norm(model.fc.weight)
+                    loss += LAMBDA + reg_loss
                     preds = prediction(matrix, outputs)
                     if phase == 'train':
                         loss.backward()
                         optimizer.step()
 
                 running_loss += loss.item() * inputs.size(0)
-                running_corrects += torch.sum(preds == labels.data)
+                running_corrects += torch.sum(preds == labels.data.int())
                 done += len(inputs)
 
             epoch_loss = running_loss / len(dataloaders[phase].dataset)
@@ -135,7 +130,7 @@ def train_model(model, dataloaders, criterion, optimizer, device, matrix, num_ep
     model.load_state_dict(best_model_wts)
     return model, val_acc_history
 
-def main(model, num_epochs=10):
+def main(num_epochs=10):
     text = open('predicate-matrix-binary.txt').read()
     rows = text.split("\n")[:-1]
     matrix = [list(map(int, row.split(' '))) for row in rows]
@@ -162,7 +157,6 @@ def main(model, num_epochs=10):
     num_ftrs = model_ft.fc.in_features
     model_ft.fc = nn.Linear(num_ftrs, NUM_PREDS)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model_ft.load_state_dict(torch.load(model, map_location=device))
 
     dataset = AnimalsDataset(images_file="train_images.txt", classes=train_classes, matrix=train_matrix, transform=transforms.Compose([
         transforms.ToTensor(),
@@ -203,10 +197,9 @@ def main(model, num_epochs=10):
 
     plt.plot(range(1, num_epochs + 1), ohist)
     plt.xticks(np.arange(1, num_epochs+1, 1.0))
-    plt.savefig('val_acc.png')
-    torch.save(model_ft.state_dict(), 'model.pth')
+    plt.savefig('val_acc_norm.png')
+    torch.save(model_ft.state_dict(), 'model_norm.pth')
 
 if __name__ == '__main__':
-    model = sys.argv[1]
-    num_epochs = int(sys.argv[2])
-    main(model, num_epochs)
+    num_epochs = int(sys.argv[1])
+    main(num_epochs)
