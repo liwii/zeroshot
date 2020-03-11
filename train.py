@@ -99,7 +99,7 @@ def train_model(model, dataloaders, criterion, optimizer, device, matrix, num_ep
                     outputs = sigmoid(outputs)
                     loss = criterion(outputs, predicates)
                     reg_loss = torch.norm(model.fc.weight)
-                    loss += LAMBDA + reg_loss
+                    loss += LAMBDA * reg_loss
                     preds = prediction(matrix, outputs)
                     if phase == 'train':
                         loss.backward()
